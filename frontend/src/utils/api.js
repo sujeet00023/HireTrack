@@ -1,0 +1,28 @@
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: '/api',
+  timeout: 10000,
+})
+
+// Attach JWT to every request
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('ht_token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+// Handle 401 globally
+api.interceptors.response.use(
+  res => res,
+  err => {
+    if (err.response?.status === 401) {
+      localStorage.removeItem('ht_token')
+      localStorage.removeItem('ht_user')
+      window.location.href = '/login'
+    }
+    return Promise.reject(err)
+  }
+)
+
+export default api
