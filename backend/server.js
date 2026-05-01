@@ -19,13 +19,32 @@ if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
 
 // ── Middleware ───────────────────────────────────────────
 app.use(cors({
-  origin: [
-    process.env.CLIENT_URL || 'http://localhost:5173',
-    'http://localhost:3000',
-    'http://localhost:4173'
-  ],
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow Postman, curl, mobile (no origin header)
+    if (!origin) return callback(null, true)
+
+    const allowed = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://localhost:4173',
+      process.env.CLIENT_URL,
+    ].filter(Boolean)
+
+    if (allowed.includes(origin)) {
+      return callback(null, true)
+    }
+
+    // Log blocked origins to help debug
+    console.log('CORS blocked origin:', origin)
+    return callback(new Error('Not allowed by CORS'))
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }))
+
+// Handle OPTIONS preflight for every route
+app.options('*', cors())
 
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
